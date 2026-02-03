@@ -1,95 +1,113 @@
 # Hack The Box — Blackfield
 
-Main roadblock beginners would face is LSASS, would recommaned taking a look before moving on with the machine
+!!! important note for beginners, would recommened talking a look at LSASS before moving on with this.
 
 ## Overview
-**Blackfield** is a Windows Active Directory machine from Hack The Box that focuses on AD enumeration, abusing Kerberos pre-authentication, SMB share analysis, and privilege escalation within a domain environment.
+**Blackfield** is a retired **Hard** Windows Active Directory machine from Hack The Box.  
+The box simulates a realistic corporate AD environment and focuses heavily on **Kerberos abuse**, **credential extraction**, and **privilege escalation through misconfigured domain groups**.
 
 - **Difficulty:** Hard  
 - **OS:** Windows  
-- **Category:** Active Directory  
+- **Environment:** Active Directory Domain Controller  
 - **Status:** Rooted ✅  
 
 ---
 
-## Objectives
-- Enumerate a Windows domain environment
-- Identify valid domain users
-- Abuse Kerberos authentication weaknesses
-- Escalate privileges within Active Directory
-- Achieve Domain Administrator access
+## Services & Enumeration
+
+Initial enumeration reveals a classic AD setup with the following key services:
+
+- DNS (53)
+- Kerberos (88)
+- LDAP (389 / 3268)
+- SMB (445)
+- RPC
+- WinRM (5985)
+
+The exposed services clearly indicate that the target is a **Domain Controller**, making Active Directory enumeration the primary attack surface.
 
 ---
 
-## Enumeration
+## SMB Enumeration & User Discovery
 
-### Network Scanning
-Initial enumeration revealed common AD-related services:
-- DNS
-- Kerberos
-- LDAP
-- SMB
-- WinRM
+SMB enumeration reveals accessible shares that allow:
+- Discovery of domain-related files
+- Extraction of **valid domain usernames**
 
-SMB enumeration exposed multiple shares, including backup-related directories containing sensitive domain data.
-
-### Domain Enumeration
-- Extracted and validated domain users
-- Identified Kerberos pre-authentication weaknesses
-- Enumerated domain structure and privileges
+These usernames become critical for subsequent Kerberos-based attacks.
 
 ---
 
-## Initial Access
+## Initial Access — Kerberos AS-REP Roasting
 
-### Kerberos Abuse
-- Performed **AS-REP roasting** against users without Kerberos pre-authentication
-- Successfully cracked a domain user password
-- Gained initial authenticated access to the domain
+One of the identified domain users has **Kerberos pre-authentication disabled**.
+
+This misconfiguration allows:
+- Requesting an AS-REP response without valid credentials
+- Extracting an encrypted Kerberos hash
+- Performing **offline password cracking**
+
+Cracking the AS-REP hash yields valid domain credentials, granting authenticated access to additional resources.
 
 ---
 
-## Privilege Escalation
+## Credential Discovery
 
-### Lateral Movement
-- Accessed sensitive SMB backups
-- Extracted and analyzed domain data
-- Leveraged credential reuse and misconfigurations
+With authenticated SMB access:
+- Sensitive forensic artifacts are discovered in shared directories
+- These include memory dump files (e.g. LSASS-related data)
 
-### Domain Escalation
-- Identified excessive privileges assigned to a service account
-- Abused Active Directory permissions to escalate privileges
-- Achieved **Domain Admin** access
+Analyzing these files leads to the extraction of **additional credentials**, including an account with elevated privileges and **WinRM access**.
+
+---
+
+## Privilege Escalation — Backup Operators Abuse
+
+The newly obtained account is a member of the **Backup Operators** group.
+
+This group has powerful rights within Active Directory, including:
+- Ability to back up system files
+- Access to sensitive domain data
+
+By abusing these privileges, it is possible to:
+- Dump the **Active Directory database (NTDS.dit)**
+- Extract password hashes for all domain users
+
+---
+
+## Domain Compromise
+
+From the dumped AD database:
+- Domain Administrator credentials are recovered
+- Full **Domain Admin** access is achieved
+
+This completes the attack chain and results in total domain compromise.
 
 ---
 
 ## Flags
 - **User:** ✅  
-- **Root:** ✅  
+- **Root / Administrator:** ✅  
 
 ---
 
 ## Key Takeaways
-- Always audit Kerberos pre-authentication settings
-- Restrict access to backup shares containing sensitive AD data
-- Enforce least privilege for service accounts
-- Regularly review Active Directory ACLs
+- Kerberos pre-authentication should never be disabled unnecessarily
+- Backup Operators is a highly privileged group and must be tightly controlled
+- Storing sensitive dumps or backups on accessible shares is extremely dangerous
+- Small AD misconfigurations can be chained into full domain takeover
 
 ---
 
 ## Tools Used
 - Nmap
-- SMBClient
-- Impacket
-- Kerberos tools (AS-REP roasting)
-- PowerView / AD enumeration utilities
-
----
-
-## Notes
-This machine highlights how **small misconfigurations in Active Directory** can chain together into a full domain compromise.
+- SMBClient / enum4linux
+- Impacket (Kerberos & AD attacks)
+- Hashcat / John the Ripper
+- Memory dump analysis tools
+- NTDS extraction utilities
 
 ---
 
 ## Disclaimer
-This write-up is for **educational purposes only** and was completed in a controlled lab environment provided by Hack The Box.
+This write-up is for **educational purposes only** and was performed in a controlled lab environment provided by Hack The Box.
