@@ -46,9 +46,8 @@ $krb5asrep$23$support@BLACKFIELD.LOCAL:83806b17dd767715a060b3382310667e$dfb88fcd
 `````
 
 While it runs, we will try authenticating as null to find what shares we have access as guest:
-<img width="1268" height="248" alt="Pasted image 20260203132340" src="https://github.com/user-attachments/assets/f6768c57-6cd8-4fd6-b66a-9a5fc0a20efa" />
 
-![[Pasted image 20260203132340.png]]
+<img width="1268" height="248" alt="Pasted image 20260203132340" src="https://github.com/user-attachments/assets/f6768c57-6cd8-4fd6-b66a-9a5fc0a20efa" />
 
 the profiles shares is empty, let's run NPUsers to check for kerbroastable users:
 
@@ -83,9 +82,8 @@ Session completed.
 `````
 
 now we try to enumerate smbclient again to see if we access to the forensics share:
-<img width="868" height="248" alt="Pasted image 20260203133705" src="https://github.com/user-attachments/assets/27c88809-3a53-4361-8e8e-8aec0744ce5e" />
 
-![[Pasted image 20260203133705.png]]
+<img width="868" height="248" alt="Pasted image 20260203133705" src="https://github.com/user-attachments/assets/27c88809-3a53-4361-8e8e-8aec0744ce5e" />
 
 we still don't have access, now will try running a bloodhound-python3 to see what permission we have :
 
@@ -103,36 +101,32 @@ INFO: BloodHound.py for BloodHound LEGACY (BloodHound 4.2 and 4.3)
 ```
 
 on bloodhound, we have permissions to force change password on a user called 'AUDIT2020':
+
 <img width="1199" height="597" alt="Pasted image 20260203134031" src="https://github.com/user-attachments/assets/8815d847-3ddb-4994-b924-4f50b3b61d89" />
 
-![[Pasted image 20260203134031.png]]
-
 Following bloodhound's linux abuse options:
-<img width="1145" height="371" alt="Pasted image 20260203134128" src="https://github.com/user-attachments/assets/8569365c-d281-452b-854c-58ca191bef51" />
 
-![[Pasted image 20260203134218.png]]
+<img width="1145" height="371" alt="Pasted image 20260203134128" src="https://github.com/user-attachments/assets/8569365c-d281-452b-854c-58ca191bef51" />
 
 We run what is written and after changing the password, we get access to audit2020 which gives us access to the 'forensics' file share on smbclient:
 
-![[Pasted image 20260203134128.png]]
 <img width="343" height="400" alt="Pasted image 20260203134218" src="https://github.com/user-attachments/assets/65e37a2a-d2fd-4825-9304-bf482ba5fd14" />
 
 going on smbclient, we find an 'lsass.zip' (Local Security Authority Subsystem Service) 
+
 <img width="542" height="409" alt="Pasted image 20260203134412" src="https://github.com/user-attachments/assets/5e447ddb-fbf6-494f-b200-42377aa12ae6" />
 
-![[Pasted image 20260203134412.png]]
 
 so we unzip and get a mini crash dump file:
+
 <img width="628" height="326" alt="Pasted image 20260203134539" src="https://github.com/user-attachments/assets/a61a215b-f159-4594-9550-a5a6cc00b82a" />
 
-![[Pasted image 20260203134539.png]]
 now we try to dump all info in the dump file using ``pypykatz`` with the following command, which will give us the svc_backup user's password:
 a resource for this :
 https://www.thehacker.recipes/ad/movement/credentials/dumping/dpapi-protected-secrets
 
 <img width="429" height="265" alt="Pasted image 20260203134741" src="https://github.com/user-attachments/assets/e70a9a5a-72a0-470c-9ffe-336ea12f934c" />
 
-![[Pasted image 20260203134741.png]]
 
 ````sql
 Username: svc_backup
@@ -176,7 +170,7 @@ Mode                LastWriteTime         Length Name
 
 we can read user.txt, now we enumerate svc_backup for possible easy privilege escalation pathes:
 
-![[Pasted image 20260203135246.png]]<img width="489" height="232" alt="Pasted image 20260203135246" src="https://github.com/user-attachments/assets/10385b07-2f1c-4f81-bc5c-58fc82b9c01f" />
+<img width="489" height="232" alt="Pasted image 20260203135246" src="https://github.com/user-attachments/assets/10385b07-2f1c-4f81-bc5c-58fc82b9c01f" />
 
 
 we see SeBackupPriv and SeRestore, These are 2 dangerous privileges which leads to administrator password dump. 
@@ -278,11 +272,8 @@ then we run unix2dos on it :
 
 running these commands leads to a ntds.dit and system files appearing and from there we download them on our attacker machine to dump all domain hashes:
 
-![[Pasted image 20260203140345.png]]
 <img width="828" height="663" alt="Pasted image 20260203140345" src="https://github.com/user-attachments/assets/14d6a2c4-c1cd-4f1f-80fa-85ebd6fbf225" />
 
-
-![[Pasted image 20260203140500.png]]
 <img width="416" height="159" alt="Pasted image 20260203140500" src="https://github.com/user-attachments/assets/b5be0649-d71a-4216-be08-bffec6216402" />
 
 now, using secretsdump.py, we get:
